@@ -17,6 +17,10 @@ app.add_middleware(
 # This will now successfully see the Todos class and build the table
 Todos.metadata.create_all(bind=engine)
 
+@app.get("/healthy")
+def health_check():
+    return {'status' : 'Healthy'}
+
 # include routers
 app.include_router(auth.router)
 app.include_router(todos.router)
