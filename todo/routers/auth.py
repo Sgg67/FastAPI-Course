@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from sqlalchemy.orm import Session
-from fastapi import Depends, FastAPI, APIRouter, HTTPException
+from fastapi import Depends, FastAPI, APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from models import Users
 from passlib.context import CryptContext
@@ -9,7 +9,7 @@ from starlette import status
 from database import SessionLocal, engine
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
-
+from fastapi.templating import Jinja2Templates
 router = APIRouter(
     prefix='/auth',
     tags=['auth']
@@ -43,7 +43,19 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
+templates = Jinja2Templates(directory="./templates")
 
+
+### Pages ###
+@router.get("/login-page")
+def render_login_page(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html")
+
+@router.get("/register-page")
+def render_register_page(request: Request):
+    return templates.TemplateResponse(request=request, name="register.html")
+
+### Endpoints ###
 def authenticate_user(username: str, password: str, db):
     user = db.query(Users).filter(Users.username == username).first()
     if not user:
@@ -58,15 +70,31 @@ def create_access_token(username : str, user_id: int, role: str, expires_delta: 
     encode.update({'exp' : expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token', auto_error=False)
+async def get_current_user(request: Request, token: Annotated[str, Depends(oauth2_bearer)] = None):
+    # 1. Look for the token. If oauth2_bearer didn't find it in the header, check the cookies.
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    # 2. If it's not in either place, block the request
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail='Authentication token missing.'
+        )
+        
     try:
-       payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-       username: str = payload.get('sub') 
-       user_id: int = payload.get('id')
-       user_role: str = payload.get('role')
-       if username is None or user_id is None:
-           raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
-       return {'username': username, 'id' : user_id, 'user_role': user_role}
+        # 3. Decode the JWT exactly as before
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get('sub') 
+        user_id: int = payload.get('id')
+        user_role: str = payload.get('role')
+        
+        if username is None or user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
+            
+        return {'username': username, 'id' : user_id, 'user_role': user_role}
+        
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
 
@@ -85,6 +113,7 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
 
     db.add(create_user_model)
     db.commit()
+
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
     user = authenticate_user(form_data.username, form_data.password, db)
