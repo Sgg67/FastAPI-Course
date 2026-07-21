@@ -1,36 +1,40 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Todos
 from routers import auth, todos, admin, users
-from fastapi.templating import Jinja2Templates
+from routers.auth import get_current_user
 from fastapi.staticfiles import StaticFiles
-# Initialize fast api app
+from fastapi.responses import RedirectResponse
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Allows all origins (including your Codespace domain)
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],          # Allows GET, POST, PUT, DELETE, OPTIONS
-    allow_headers=["*"],          # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# This will now successfully see the Todos class and build the table
 Todos.metadata.create_all(bind=engine)
 
-templates = Jinja2Templates(directory="./templates")
-
-app.mount("/static", StaticFiles(directory = "./static"), name="static")
+app.mount("/static", StaticFiles(directory="./static"), name="static")
 
 @app.get("/")
-def test(request: Request):
-    return templates.TemplateResponse(request=request, name="home.html")
+async def test(request: Request):
+    try:
+        user = await get_current_user(request)
+        if user is None:
+            return RedirectResponse(url="/auth/login-page", status_code=status.HTTP_302_FOUND)
+    except HTTPException:
+        return RedirectResponse(url="/auth/login-page", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/todos/todo-page", status_code=status.HTTP_302_FOUND)
+
 @app.get("/healthy")
 def health_check():
-    return {'status' : 'Healthy'}
+    return {'status': 'Healthy'}
 
-# include routers
 app.include_router(auth.router)
 app.include_router(todos.router)
 app.include_router(admin.router)
