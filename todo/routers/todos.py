@@ -1,5 +1,6 @@
 from typing import Annotated
-from fastapi import APIRouter,Depends, HTTPException, Path
+from fastapi import APIRouter,Depends, HTTPException, Path, Request
+from httpx import request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal
@@ -7,8 +8,16 @@ from models import Todos
 from starlette import status
 from routers import auth
 from .auth import get_current_user
+from starlette.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+
+templates = Jinja2Templates(directory="./templates")
 # Initialize fast api app
-router = APIRouter()
+router = APIRouter(
+    prefix = "/todos",
+    tags=['todos']
+)
 
 # This will now successfully see the Todos class and build the table
 Todos.metadata.create_all(bind=engine)
@@ -43,14 +52,54 @@ class TodoRequest(BaseModel):
             }
         }
     }
+def redirect_to_login():
+    redirect_response = RedirectResponse(url="/auth/login-page", status_code=status.HTTP_302_FOUND)
+    redirect_response.delete_cookie(key="access_token")
+    return redirect_response
 
+### Pages ###
+### Pages ###
+@router.get("/todo-page")
+async def render_todo_page(request: Request, user: user_dependency, db: db_dependency):
+    try:
+        if user is None:
+            return redirect_to_login()
+            
+        todos = db.query(Todos).filter(Todos.owner_id == user.get("id")).all()
+        
+        return templates.TemplateResponse(
+            request=request, 
+            name="todo.html", 
+            context={"todos": todos, "user": user}
+        )
+        
+    except Exception as e:
+        print(f"Redirect Interrupted By: {e}")
+        return redirect_to_login()
+    
+@router.get('/add-todo-page')
+async def render_add_todo_page(request: Request, user: user_dependency):  # 1. Renamed function & 2. Added user_dependency
+    try:
+        if user is None:
+            return redirect_to_login()
+            
+        # 3. Changed context layout to modern FastAPI/Jinja style and name to your add todo layout HTML file
+        return templates.TemplateResponse(
+            request=request, 
+            name="add_todo.html", 
+            context={"user": user}
+        )
+    except Exception as e:
+        print(f"Add Todo Page Error: {e}")
+        return redirect_to_login()
+### Endpoints ###
 @router.get("/", status_code=status.HTTP_200_OK)
 async def read_all(user: user_dependency, db: db_dependency):
     if user is None:
-        raise HTTPException(stus_code=401, detail="Authentication Failed")
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     return db.query(Todos).filter(Todos.owner_id == user.get('id')).all()
 
-@router.post("/create-todo", status_code=status.HTTP_201_CREATED)
+@router.post("/todo", status_code=status.HTTP_201_CREATED)
 async def create_todo(user: user_dependency, db: db_dependency, todo_request: TodoRequest):
     if user is None:
         raise HTTPException(stus_code=401, detail="Authentication Failed")
