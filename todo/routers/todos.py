@@ -58,40 +58,57 @@ def redirect_to_login():
     return redirect_response
 
 ### Pages ###
-### Pages ###
 @router.get("/todo-page")
 async def render_todo_page(request: Request, user: user_dependency, db: db_dependency):
     try:
         if user is None:
             return redirect_to_login()
-            
+
         todos = db.query(Todos).filter(Todos.owner_id == user.get("id")).all()
-        
+
         return templates.TemplateResponse(
-            request=request, 
-            name="todo.html", 
+            request=request,
+            name="todo.html",
             context={"todos": todos, "user": user}
         )
-        
+
     except Exception as e:
         print(f"Redirect Interrupted By: {e}")
         return redirect_to_login()
-    
-@router.get('/add-todo-page')
-async def render_add_todo_page(request: Request, user: user_dependency):  # 1. Renamed function & 2. Added user_dependency
+
+@router.get("/edit-todo-page/{todo_id}")
+async def render_edit_todo_page(request: Request, todo_id: int, user: user_dependency, db: db_dependency):
     try:
         if user is None:
             return redirect_to_login()
-            
-        # 3. Changed context layout to modern FastAPI/Jinja style and name to your add todo layout HTML file
+
+        todo = db.query(Todos).filter(Todos.id == todo_id).first()
+
         return templates.TemplateResponse(
-            request=request, 
-            name="add_todo.html", 
+            request=request,
+            name="edit-todo.html",
+            context={"todo": todo, "user": user}
+        )
+
+    except Exception as e:
+        print(f"Edit Todo Page Error: {e}")
+        return redirect_to_login()
+
+@router.get('/add-todo-page')
+async def render_add_todo_page(request: Request, user: user_dependency):
+    try:
+        if user is None:
+            return redirect_to_login()
+
+        return templates.TemplateResponse(
+            request=request,
+            name="add_todo.html",
             context={"user": user}
         )
     except Exception as e:
         print(f"Add Todo Page Error: {e}")
         return redirect_to_login()
+
 ### Endpoints ###
 @router.get("/", status_code=status.HTTP_200_OK)
 async def read_all(user: user_dependency, db: db_dependency):
@@ -102,7 +119,7 @@ async def read_all(user: user_dependency, db: db_dependency):
 @router.post("/todo", status_code=status.HTTP_201_CREATED)
 async def create_todo(user: user_dependency, db: db_dependency, todo_request: TodoRequest):
     if user is None:
-        raise HTTPException(stus_code=401, detail="Authentication Failed")
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     new_todo = Todos(**todo_request.model_dump(), owner_id=user.get('id'))
     db.add(new_todo)
     db.commit()
@@ -110,7 +127,7 @@ async def create_todo(user: user_dependency, db: db_dependency, todo_request: To
 @router.put("/todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_todo(user: user_dependency, db: db_dependency, todo_request: TodoRequest, todo_id: int = Path(gt=0)):
     if user is None:
-        raise HTTPException(stus_code=401, detail="Authentication Failed")
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     todo_model = db.query(Todos).filter(Todos.id == todo_id).filter(Todos.owner_id == user.get('id')).first()
     if todo_model is None:
         raise HTTPException(status_code=404, detail="Todo not found.")
@@ -125,7 +142,7 @@ async def update_todo(user: user_dependency, db: db_dependency, todo_request: To
 @router.get("/todo/{todo_id}", status_code=status.HTTP_200_OK)
 async def read_todo(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
     if user is None:
-        raise HTTPException(stus_code=401, detail="Authentication Failed")
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     todo_model = db.query(Todos).filter(Todos.id == todo_id).filter(Todos.owner_id == user.get('id')).first()
     if todo_model is not None:
         return todo_model
@@ -134,7 +151,7 @@ async def read_todo(user: user_dependency, db: db_dependency, todo_id: int = Pat
 @router.delete("/todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
     if user is None:
-        raise HTTPException(stus_code=401, detail="Authentication Failed")
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     todo_model = db.query(Todos).filter(Todos.id == todo_id).filter(Todos.owner_id == user.get('id')).first()
     if todo_model is None:
         raise HTTPException(status_code=404, detail="Todo not found")

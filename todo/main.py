@@ -1,10 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Todos
 from routers import auth, todos, admin, users
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 # Initialize fast api app
 app = FastAPI()
 
@@ -19,13 +19,12 @@ app.add_middleware(
 # This will now successfully see the Todos class and build the table
 Todos.metadata.create_all(bind=engine)
 
-templates = Jinja2Templates(directory="./templates")
 
 app.mount("/static", StaticFiles(directory = "./static"), name="static")
 
 @app.get("/")
 def test(request: Request):
-    return templates.TemplateResponse(request=request, name="home.html")
+    return RedirectResponse(url="/todos/todo-page", status_code=status.HTTP_302_FOUND)
 @app.get("/healthy")
 def health_check():
     return {'status' : 'Healthy'}
