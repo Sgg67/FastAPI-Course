@@ -5,7 +5,7 @@ A full-stack web app for finding pickleball courts and organizing open-play game
 **Courts and Play Web App:** [courts-and-play-usa.onrender.com](https://courts-and-play-usa.onrender.com)
 ---
 
-## What it does
+## Our Mission
 
 Courts and Play USA lets pickleball players:
 
