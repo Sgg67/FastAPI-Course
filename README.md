@@ -1,4 +1,4 @@
-# 🏓 Courts and Play USA
+#  Courts and Play USA
 
 A full-stack web app for finding pickleball courts and organizing open-play game sessions with other players — built with FastAPI, SQLAlchemy, and Jinja2.
 
@@ -15,11 +15,6 @@ Courts and Play USA lets pickleball players:
 - 🗓️ **Host open-play sessions** at a court, setting a date/time and player capacity
 - 🤝 **Join sessions** hosted by other players in real time, with live "spots remaining" tracking
 - 👤 **Create an account, log in, and manage a profile** (change password, update phone number) with secure, cookie-based authentication
-- 🧭 Browse everything through a clean, server-rendered Bootstrap UI
-
-Under the hood it's a REST API (browsable via FastAPI's auto-generated Swagger docs) with a set of HTML pages layered on top for a normal browsing experience.
-
----
 
 ## Tech Stack
 
@@ -33,7 +28,6 @@ Under the hood it's a REST API (browsable via FastAPI's auto-generated Swagger d
 | **Testing** | Pytest, FastAPI TestClient |
 | **Config** | python-dotenv |
 
----
 
 ## Technical Concepts Covered
 
