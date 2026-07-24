@@ -3,6 +3,7 @@
 A full-stack web app for finding pickleball courts and organizing open-play game sessions with other players — built with FastAPI, SQLAlchemy, and Jinja2.
 
 **Live demo:** [courts-and-play-usa.onrender.com](https://courts-and-play-usa.onrender.com)
+
 **Repo:** [github.com/Sgg67/courts-and-play-usa](https://github.com/Sgg67/courts-and-play-usa)
 
 ---
